@@ -1,11 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotas Sta Cruz</title>
-    <script src="https://cdn.sheetjs.com"></script>
+    <!-- Biblioteca SheetJS corrigida -->
+    <script src="https://cdn.jsdelivr.net"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; justify-content: center; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
@@ -13,66 +13,100 @@
         label { font-weight: bold; display: block; margin-top: 15px; }
         select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
         button { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 25px; }
-        .status { font-size: 12px; text-align: center; margin-bottom: 10px; padding: 5px; border-radius: 5px; }
+        button:hover { background: #218838; }
+        .status { font-size: 12px; text-align: center; margin-bottom: 10px; padding: 10px; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Localiza Sta Cruz</h2>
-        <div id="status" class="status" style="background: #fff3cd;">Carregando dados do GitHub...</div>
+        <div id="status" class="status" style="background: #fff3cd;">⏳ Carregando dados...</div>
         
         <label>De (Origem):</label>
-        <select id="origem"><option>Carregando...</option></select>
+        <select id="origem"><option>Aguarde...</option></select>
 
         <label>Para (Destino):</label>
-        <select id="destino"><option>Carregando...</option></select>
+        <select id="destino"><option>Aguarde...</option></select>
 
         <button onclick="gerarRota()">ABRIR NO GOOGLE MAPS</button>
     </div>
 
     <script>
+        // Nome do arquivo (deve estar na mesma pasta no GitHub)
         const EXCEL_URL = 'COORDENADACOMUNIDADE.xlsx'; 
+        let dadosGlobal = [];
 
         async function carregar() {
-        try {
-        // Agora o navegador entende que o arquivo é do "mesmo dono" do site
-        const res = await fetch(EXCEL_URL);
-                const res = await fetch(EXCEL_URL);
-                const ab = await res.arrayBuffer();
+            const statusDiv = document.getElementById('status');
+            try {
+                // Fetch único para evitar erro de re-declaração
+                const resposta = await fetch(EXCEL_URL);
+                
+                if (!resposta.ok) throw new Error("Arquivo não encontrado no servidor");
+
+                const ab = await resposta.arrayBuffer();
                 const wb = XLSX.read(new Uint8Array(ab), {type: 'array'});
                 const sheet = wb.Sheets[wb.SheetNames[0]];
-                dados = XLSX.utils.sheet_to_json(sheet);
+                
+                // Converte para JSON
+                dadosGlobal = XLSX.utils.sheet_to_json(sheet);
+
+                if (dadosGlobal.length === 0) throw new Error("A planilha está vazia");
 
                 const selOri = document.getElementById('origem');
                 const selDes = document.getElementById('destino');
-                selOri.innerHTML = ""; selDes.innerHTML = "";
+                
+                selOri.innerHTML = '<option value="">Selecione a Origem</option>';
+                selDes.innerHTML = '<option value="">Selecione o Destino</option>';
 
-                dados.forEach((item, i) => {
-                    let opt = document.createElement('option');
-                    opt.value = i;
-                    opt.innerText = item.Comunidade;
-                    selOri.appendChild(opt.cloneNode(true));
-                    selDes.appendChild(opt);
+                dadosGlobal.forEach((item, i) => {
+                    if(item.Comunidade) {
+                        let opt = document.createElement('option');
+                        opt.value = i;
+                        opt.innerText = item.Comunidade;
+                        selOri.appendChild(opt.cloneNode(true));
+                        selDes.appendChild(opt);
+                    }
                 });
 
-                document.getElementById('status').innerText = "✅ Conectado ao Excel";
-                document.getElementById('status').style.background = "#d4edda";
+                statusDiv.innerText = "✅ Dados carregados com sucesso!";
+                statusDiv.style.background = "#d4edda";
+                statusDiv.style.color = "#155724";
+
             } catch (e) {
-                document.getElementById('status').innerText = "❌ Erro ao ler arquivo";
-                document.getElementById('status').style.background = "#f8d7da";
+                console.error(e);
+                statusDiv.innerText = "❌ Erro: " + e.message;
+                statusDiv.style.background = "#f8d7da";
+                statusDiv.style.color = "#721c24";
             }
         }
 
         function gerarRota() {
-            const c1 = dados[document.getElementById('origem').value];
-            const c2 = dados[document.getElementById('destino').value];
+            const idxOri = document.getElementById('origem').value;
+            const idxDes = document.getElementById('destino').value;
+
+            if (idxOri === "" || idxDes === "") {
+                alert("Por favor, selecione a origem e o destino.");
+                return;
+            }
+
+            const c1 = dadosGlobal[idxOri];
+            const c2 = dadosGlobal[idxDes];
             
-            // Link oficial do Google Maps com os parâmetros de rota
+            // Validação das colunas de coordenadas (devem ter esses nomes no Excel)
+            if (!c1.LATITUDE || !c1.LONGITUDE || !c2.LATITUDE || !c2.LONGITUDE) {
+                alert("Erro: Coordenadas não encontradas para estas comunidades.");
+                return;
+            }
+
+            // URL formatada corretamente para o Google Maps
             const url = `https://www.google.com{c1.LATITUDE},${c1.LONGITUDE}&destination=${c2.LATITUDE},${c2.LONGITUDE}&travelmode=driving`;
+            
             window.open(url, '_blank');
         }
 
-        carregar();
+        // Inicia o processo
+        window.onload = carregar;
     </script>
 </body>
 </html>
