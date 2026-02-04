@@ -1,1 +1,17 @@
-{"name":"LocalizaStaCruz","display":"standalone","start_url":"index.html"}
+{
+  "name": "Localiza Sta Cruz",
+  "short_name": "Sta Cruz",
+  "description": "Sistema de Rotas Santa Cruz",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "r-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
