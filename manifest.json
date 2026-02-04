@@ -1,0 +1,10 @@
+
+{
+  "name": "Localiza Santa Cruz",
+  "short_name": "LocalizaSC",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#1a73e8",
+  "icons": [{ "src": "https://cdn-icons-png.flaticon.com", "sizes": "512x512", "type": "image/png" }]
+}
