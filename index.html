@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotas Sta Cruz</title>
-    <!-- Biblioteca SheetJS corrigida -->
+    
+    <!-- REFERÊNCIA AO MANIFEST (Adicionado aqui) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="icone.png">
+
+    <!-- Biblioteca SheetJS -->
     <script src="https://cdn.jsdelivr.net"></script>
+    
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; justify-content: center; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
@@ -32,26 +39,24 @@
     </div>
 
     <script>
-        // Nome do arquivo (deve estar na mesma pasta no GitHub)
         const EXCEL_URL = 'COORDENADACOMUNIDADE.xlsx'; 
         let dadosGlobal = [];
+
+        // Registro do Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => console.log("SW não configurado"));
+        }
 
         async function carregar() {
             const statusDiv = document.getElementById('status');
             try {
-                // Fetch único para evitar erro de re-declaração
                 const resposta = await fetch(EXCEL_URL);
-                
-                if (!resposta.ok) throw new Error("Arquivo não encontrado no servidor");
+                if (!resposta.ok) throw new Error("Arquivo Excel não encontrado.");
 
                 const ab = await resposta.arrayBuffer();
                 const wb = XLSX.read(new Uint8Array(ab), {type: 'array'});
                 const sheet = wb.Sheets[wb.SheetNames[0]];
-                
-                // Converte para JSON
                 dadosGlobal = XLSX.utils.sheet_to_json(sheet);
-
-                if (dadosGlobal.length === 0) throw new Error("A planilha está vazia");
 
                 const selOri = document.getElementById('origem');
                 const selDes = document.getElementById('destino');
@@ -69,15 +74,13 @@
                     }
                 });
 
-                statusDiv.innerText = "✅ Dados carregados com sucesso!";
+                statusDiv.innerText = "✅ Conectado ao Excel";
                 statusDiv.style.background = "#d4edda";
                 statusDiv.style.color = "#155724";
 
             } catch (e) {
-                console.error(e);
-                statusDiv.innerText = "❌ Erro: " + e.message;
+                statusDiv.innerText = "❌ Erro ao ler dados";
                 statusDiv.style.background = "#f8d7da";
-                statusDiv.style.color = "#721c24";
             }
         }
 
@@ -86,26 +89,17 @@
             const idxDes = document.getElementById('destino').value;
 
             if (idxOri === "" || idxDes === "") {
-                alert("Por favor, selecione a origem e o destino.");
+                alert("Selecione origem e destino!");
                 return;
             }
 
             const c1 = dadosGlobal[idxOri];
             const c2 = dadosGlobal[idxDes];
             
-            // Validação das colunas de coordenadas (devem ter esses nomes no Excel)
-            if (!c1.LATITUDE || !c1.LONGITUDE || !c2.LATITUDE || !c2.LONGITUDE) {
-                alert("Erro: Coordenadas não encontradas para estas comunidades.");
-                return;
-            }
-
-            // URL formatada corretamente para o Google Maps
             const url = `https://www.google.com{c1.LATITUDE},${c1.LONGITUDE}&destination=${c2.LATITUDE},${c2.LONGITUDE}&travelmode=driving`;
-            
             window.open(url, '_blank');
         }
 
-        // Inicia o processo
         window.onload = carregar;
     </script>
 </body>
