@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotas Sta Cruz</title>
     
-    <!-- REFERÊNCIA AO MANIFEST (Adicionado aqui) -->
-    <link rel="manifest" href="manifest.json">
+    <!-- Configurações PWA e Ícones -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./r-512x512.png" type="image/png">
+    <link rel="apple-touch-icon" href="./r-512x512.png">
     <meta name="theme-color" content="#007bff">
-    <link rel="apple-touch-icon" href="icone.png">
 
-    <!-- Biblioteca SheetJS -->
+    <!-- Biblioteca SheetJS (Leitura de Excel) -->
     <script src="https://cdn.jsdelivr.net"></script>
     
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; justify-content: center; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { color: #007bff; text-align: center; }
+        h2 { color: #007bff; text-align: center; margin-top: 0; }
         label { font-weight: bold; display: block; margin-top: 15px; }
-        select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
-        button { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 25px; }
+        select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; box-sizing: border-box; }
+        button { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 25px; transition: 0.3s; }
         button:hover { background: #218838; }
         .status { font-size: 12px; text-align: center; margin-bottom: 10px; padding: 10px; border-radius: 5px; font-weight: bold; }
     </style>
@@ -27,46 +28,59 @@
 <body>
     <div class="container">
         <h2>Localiza Sta Cruz</h2>
-        <div id="status" class="status" style="background: #fff3cd;">⏳ Carregando dados...</div>
+        <div id="status" class="status" style="background: #fff3cd; color: #856404;">⏳ Conectando à base de dados...</div>
         
-        <label>De (Origem):</label>
-        <select id="origem"><option>Aguarde...</option></select>
+        <label>Origem:</label>
+        <select id="origem"><option value="">Carregando comunidades...</option></select>
 
-        <label>Para (Destino):</label>
-        <select id="destino"><option>Aguarde...</option></select>
+        <label>Destino:</label>
+        <select id="destino"><option value="">Carregando comunidades...</option></select>
 
         <button onclick="gerarRota()">ABRIR NO GOOGLE MAPS</button>
     </div>
 
     <script>
-        const EXCEL_URL = 'COORDENADACOMUNIDADE.xlsx'; 
+        // Uso de ./ para garantir que o GitHub Pages encontre o arquivo na pasta correta
+        const EXCEL_URL = './COORDENADACOMUNIDADE.xlsx'; 
         let dadosGlobal = [];
 
-        // Registro do Service Worker para PWA
+        // Registro do Service Worker para suporte PWA (Instalação)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(() => console.log("SW não configurado"));
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registrado!', reg))
+                    .catch(err => console.log('Erro ao registrar SW', err));
+            });
         }
 
-        async function carregar() {
+        async function carregarDados() {
             const statusDiv = document.getElementById('status');
+            const selOri = document.getElementById('origem');
+            const selDes = document.getElementById('destino');
+
             try {
-                const resposta = await fetch(EXCEL_URL);
-                if (!resposta.ok) throw new Error("Arquivo Excel não encontrado.");
+                // Fetch com cache: reload para garantir dados novos se houver alteração
+                const resposta = await fetch(EXCEL_URL, { cache: "no-store" });
+                
+                if (!resposta.ok) throw new Error("Não foi possível encontrar o arquivo Excel.");
 
                 const ab = await resposta.arrayBuffer();
-                const wb = XLSX.read(new Uint8Array(ab), {type: 'array'});
+                const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
                 const sheet = wb.Sheets[wb.SheetNames[0]];
+                
+                // Converte a planilha para JSON
                 dadosGlobal = XLSX.utils.sheet_to_json(sheet);
 
-                const selOri = document.getElementById('origem');
-                const selDes = document.getElementById('destino');
-                
+                if (dadosGlobal.length === 0) throw new Error("A planilha está vazia ou sem dados válidos.");
+
+                // Limpa os selects
                 selOri.innerHTML = '<option value="">Selecione a Origem</option>';
                 selDes.innerHTML = '<option value="">Selecione o Destino</option>';
 
+                // Preenche as opções baseadas na coluna 'Comunidade'
                 dadosGlobal.forEach((item, i) => {
-                    if(item.Comunidade) {
-                        let opt = document.createElement('option');
+                    if (item.Comunidade) {
+                        const opt = document.createElement('option');
                         opt.value = i;
                         opt.innerText = item.Comunidade;
                         selOri.appendChild(opt.cloneNode(true));
@@ -74,13 +88,17 @@
                     }
                 });
 
-                statusDiv.innerText = "✅ Conectado ao Excel";
+                statusDiv.innerText = "✅ " + dadosGlobal.length + " Comunidades Carregadas";
                 statusDiv.style.background = "#d4edda";
                 statusDiv.style.color = "#155724";
 
             } catch (e) {
-                statusDiv.innerText = "❌ Erro ao ler dados";
+                console.error("Erro detalhado:", e);
+                statusDiv.innerText = "❌ Erro ao ler dados. Verifique o arquivo Excel.";
                 statusDiv.style.background = "#f8d7da";
+                statusDiv.style.color = "#721c24";
+                selOri.innerHTML = '<option>Erro ao carregar</option>';
+                selDes.innerHTML = '<option>Erro ao carregar</option>';
             }
         }
 
@@ -89,18 +107,26 @@
             const idxDes = document.getElementById('destino').value;
 
             if (idxOri === "" || idxDes === "") {
-                alert("Selecione origem e destino!");
+                alert("Por favor, selecione a ORIGEM e o DESTINO antes de continuar.");
                 return;
             }
 
             const c1 = dadosGlobal[idxOri];
             const c2 = dadosGlobal[idxDes];
             
+            // Verifica se as colunas de coordenadas existem no Excel
+            if (!c1.LATITUDE || !c1.LONGITUDE || !c2.LATITUDE || !c2.LONGITUDE) {
+                alert("Erro: Certifique-se que as colunas LATITUDE e LONGITUDE existem no Excel.");
+                return;
+            }
+
+            // Abre o Google Maps com os parâmetros de origem e destino
             const url = `https://www.google.com{c1.LATITUDE},${c1.LONGITUDE}&destination=${c2.LATITUDE},${c2.LONGITUDE}&travelmode=driving`;
             window.open(url, '_blank');
         }
 
-        window.onload = carregar;
+        // Inicializa o carregamento
+        window.onload = carregarDados;
     </script>
 </body>
 </html>
