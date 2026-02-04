@@ -1,0 +1,93 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Localiza Santa Cruz</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.sheetjs.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; text-align: center; background: #eef2f3; color: #333; }
+        .card { max-width: 450px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        h2 { color: #1e40af; margin-bottom: 20px; }
+        label { display: block; margin-top: 15px; font-weight: 600; text-align: left; color: #4b5563; }
+        select { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 16px; background: #fff; }
+        button { width: 100%; background: #1e40af; color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 25px; font-size: 16px; }
+        .btn-mapa { display: block; background: #15803d; color: white; text-decoration: none; padding: 16px; border-radius: 10px; margin-top: 20px; font-weight: bold; }
+        #status { font-size: 12px; color: #64748b; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>📍 Localiza Santa Cruz</h2>
+        
+        <label>De (Origem):</label>
+        <select id="origem"><option>Carregando comunidades...</option></select>
+        
+        <label>Para (Destino):</label>
+        <select id="destino"><option>Carregando comunidades...</option></select>
+        
+        <button onclick="gerarRota()">CALCULAR ROTA</button>
+        
+        <div id="resultado"></div>
+        <p id="status">Conectado à base de dados do GitHub</p>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+        const URL_PLANILHA = "https://raw.githubusercontent.com";
+        let dadosComunidades = [];
+
+        async function carregarDados() {
+            try {
+                const response = await fetch(URL_PLANILHA);
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                dadosComunidades = XLSX.utils.sheet_to_json(firstSheet);
+                popularSelects();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').innerText = "Erro ao carregar planilha!";
+            }
+        }
+
+        function popularSelects() {
+            const selects = [document.getElementById('origem'), document.getElementById('destino')];
+            // Filtra pela coluna 'Nome'
+            const nomes = [...new Set(dadosComunidades.map(item => item.Nome))].filter(n => n).sort();
+            
+            selects.forEach(s => {
+                s.innerHTML = '<option value="">Selecione a localidade...</option>';
+                nomes.forEach(nome => {
+                    let opt = document.createElement('option');
+                    opt.value = nome;
+                    opt.innerText = nome;
+                    s.appendChild(opt);
+                });
+            });
+        }
+
+        function gerarRota() {
+            const org = document.getElementById('origem').value;
+            const dest = document.getElementById('destino').value;
+            
+            const p1 = dadosComunidades.find(i => i.Nome === org);
+            const p2 = dadosComunidades.find(i => i.Nome === dest);
+            
+            if (p1 && p2) {
+                // Usa colunas Latitude e Longitude
+                const url = `https://www.google.com{p1.Latitude},${p1.Longitude}/${p2.Latitude},${p2.Longitude}`;
+                document.getElementById('resultado').innerHTML = `<a href="${url}" target="_blank" class="btn-mapa">🚀 ABRIR NO GPS</a>`;
+            } else {
+                alert("Selecione os dois pontos!");
+            }
+        }
+
+        window.onload = carregarDados;
+    </script>
+</body>
+</html>
