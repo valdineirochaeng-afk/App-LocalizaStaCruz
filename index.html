@@ -1,0 +1,77 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotas Sta Cruz</title>
+    <script src="https://cdn.sheetjs.com"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #007bff; text-align: center; }
+        label { font-weight: bold; display: block; margin-top: 15px; }
+        select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
+        button { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 25px; }
+        .status { font-size: 12px; text-align: center; margin-bottom: 10px; padding: 5px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Localiza Sta Cruz</h2>
+        <div id="status" class="status" style="background: #fff3cd;">Carregando dados do GitHub...</div>
+        
+        <label>De (Origem):</label>
+        <select id="origem"><option>Carregando...</option></select>
+
+        <label>Para (Destino):</label>
+        <select id="destino"><option>Carregando...</option></select>
+
+        <button onclick="gerarRota()">ABRIR NO GOOGLE MAPS</button>
+    </div>
+
+    <script>
+        const EXCEL_URL = 'https://raw.githubusercontent.com';
+        let dados = [];
+
+        async function carregar() {
+            try {
+                const res = await fetch(EXCEL_URL);
+                const ab = await res.arrayBuffer();
+                const wb = XLSX.read(new Uint8Array(ab), {type: 'array'});
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                dados = XLSX.utils.sheet_to_json(sheet);
+
+                const selOri = document.getElementById('origem');
+                const selDes = document.getElementById('destino');
+                selOri.innerHTML = ""; selDes.innerHTML = "";
+
+                dados.forEach((item, i) => {
+                    let opt = document.createElement('option');
+                    opt.value = i;
+                    opt.innerText = item.Comunidade;
+                    selOri.appendChild(opt.cloneNode(true));
+                    selDes.appendChild(opt);
+                });
+
+                document.getElementById('status').innerText = "✅ Conectado ao Excel";
+                document.getElementById('status').style.background = "#d4edda";
+            } catch (e) {
+                document.getElementById('status').innerText = "❌ Erro ao ler arquivo";
+                document.getElementById('status').style.background = "#f8d7da";
+            }
+        }
+
+        function gerarRota() {
+            const c1 = dados[document.getElementById('origem').value];
+            const c2 = dados[document.getElementById('destino').value];
+            
+            // Link oficial do Google Maps com os parâmetros de rota
+            const url = `https://www.google.com{c1.LATITUDE},${c1.LONGITUDE}&destination=${c2.LATITUDE},${c2.LONGITUDE}&travelmode=driving`;
+            window.open(url, '_blank');
+        }
+
+        carregar();
+    </script>
+</body>
+</html>
