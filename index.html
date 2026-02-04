@@ -31,11 +31,12 @@
     </div>
 
     <script>
-        const EXCEL_URL = 'https://raw.githubusercontent.com';
-        let dados = [];
+        const EXCEL_URL = 'COORDENADACOMUNIDADE.xlsx'; 
 
         async function carregar() {
-            try {
+        try {
+        // Agora o navegador entende que o arquivo é do "mesmo dono" do site
+        const res = await fetch(EXCEL_URL);
                 const res = await fetch(EXCEL_URL);
                 const ab = await res.arrayBuffer();
                 const wb = XLSX.read(new Uint8Array(ab), {type: 'array'});
