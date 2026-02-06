@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotas Sta Cruz</title>
+    
+    <!-- CONEXÃO COM O MANIFEST (Faltava aqui) -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="./r-192x192.png">
+
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; justify-content: center; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
@@ -17,7 +23,6 @@
 <body>
     <div class="container">
         <h2>Localiza Sta Cruz</h2>
-        <!-- IDs verificados para evitar erro de 'null' -->
         <div id="status" class="status" style="background: #fff3cd;">Carregando dados...</div>
         
         <label>De (Origem):</label>
@@ -33,62 +38,56 @@
         const DATA_URL = './dadosLocais.json'; 
         let dados = [];
 
+        // 1. REGISTRO DO SERVICE WORKER (Faltava aqui)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log("Service Worker Registrado"))
+                .catch(err => console.log("Erro SW:", err));
+        }
+
         async function carregar() {
-            // Referenciando os elementos
             const statusEl = document.getElementById('status');
             const selOri = document.getElementById('origem');
             const selDes = document.getElementById('destino');
 
             try {
                 const res = await fetch(DATA_URL);
-                if (!res.ok) throw new Error('Arquivo dadosLocais.json não encontrado');
+                if (!res.ok) throw new Error('Arquivo não encontrado');
                 
                 dados = await res.json();
-
-                // Limpa os selects
                 selOri.innerHTML = ""; 
                 selDes.innerHTML = "";
 
                 dados.forEach((item, i) => {
                     let opt = document.createElement('option');
                     opt.value = i;
-                    // Usa 'Nome' conforme seu arquivo JSON
                     opt.innerText = item.Nome || `Local ${i+1}`;
                     selOri.appendChild(opt.cloneNode(true));
                     selDes.appendChild(opt);
                 });
 
-                if(statusEl) {
-                    statusEl.innerText = "✅ Dados carregados com sucesso";
-                    statusEl.style.background = "#d4edda";
-                }
+                statusEl.innerText = "✅ Dados carregados com sucesso";
+                statusEl.style.background = "#d4edda";
             } catch (e) {
-                console.error('Erro detalhado:', e);
-                if(statusEl) {
-                    statusEl.innerText = "❌ Erro ao carregar: " + e.message;
-                    statusEl.style.background = "#f8d7da";
-                }
+                statusEl.innerText = "❌ Erro ao carregar JSON";
+                statusEl.style.background = "#f8d7da";
             }
         }
 
         function gerarRota() {
             const valOri = document.getElementById('origem').value;
             const valDes = document.getElementById('destino').value;
-            
             const c1 = dados[valOri];
             const c2 = dados[valDes];
             
-            if (!c1 || !c2) return alert("Selecione a origem e o destino.");
+            if (!c1 || !c2) return alert("Selecione os locais.");
 
-            // Link corrigido com template literals (crases)
-            // Certifique-se que no JSON é LATITUDE e LONGITUDE (maiúsculo)
+            // LINK CORRIGIDO (Padrão Oficial Google Maps)
             const url = `https://www.google.com{c1.LATITUDE},${c1.LONGITUDE}&destination=${c2.LATITUDE},${c2.LONGITUDE}&travelmode=driving`;
-
             
             window.open(url, '_blank');
         }
 
-        // Garante que o script só rode depois que o HTML estiver pronto
         window.onload = carregar;
     </script>
 </body>
