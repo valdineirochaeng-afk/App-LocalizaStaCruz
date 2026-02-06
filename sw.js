@@ -1,5 +1,5 @@
 // Alterado para v2 para forçar o navegador a descartar o cache antigo com erro
-const CACHE_NAME = 'rota-sta-cruz-cache-v2';
+const CACHE_NAME = 'rota-sta-cruz-cache-v3';
 
 const urlsToCache = [
   './',
